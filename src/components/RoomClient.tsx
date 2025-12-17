@@ -167,8 +167,6 @@ export function RoomClient({ initialRoom }: { initialRoom: Room }) {
                             </div>
                         )}
 
-                        <ThemeToggle />
-
                         <button
                             onClick={() => setShowQR(true)}
                             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
