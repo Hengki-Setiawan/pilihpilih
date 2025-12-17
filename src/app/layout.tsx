@@ -22,10 +22,6 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "PilihPilih",
   },
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/icon-192.png",
-  },
 };
 
 export default function RootLayout({
