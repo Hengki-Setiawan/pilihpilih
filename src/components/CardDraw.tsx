@@ -19,7 +19,7 @@ export function CardDraw({ room }: { room: Room }) {
                 setCurrentCard(state.lastDrawn);
                 setIsRevealed(true);
                 setFlipping(false);
-            }, 600);
+            }, 2000);
         }
     }, [state.isDrawing, state.drawTimestamp, state.lastDrawn]);
 

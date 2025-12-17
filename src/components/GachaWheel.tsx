@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { spinWheel } from '@/app/actions';
 import { RotateCcw } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export function GachaWheel({ room }: { room: Room }) {
     const options = JSON.parse(room.options);
@@ -20,16 +21,17 @@ export function GachaWheel({ room }: { room: Room }) {
             const winnerIndex = options.findIndex((o: any) => o.id === state.winner);
             if (winnerIndex === -1) return;
 
+            // Calculate winner angle (0-based from start of slice 0)
             const sliceAngle = 360 / options.length;
             const randomOffset = (Math.random() - 0.5) * (sliceAngle * 0.5);
             const winnerAngle = winnerIndex * sliceAngle + sliceAngle / 2 + randomOffset;
 
-            const spins = 10 + Math.random() * 2;
-            const baseRotation = rotation + (360 * spins);
-            const currentWheelAngle = rotation % 360;
-            const targetAngle = 270 - winnerAngle;
-            const diff = ((targetAngle - currentWheelAngle) % 360 + 360) % 360;
-            const targetRotation = baseRotation + diff;
+            // Calculate target rotation to bring winner to Top (270 degrees or -90)
+            // Since rendering starts at -90, we need to rotate by (360 - winnerAngle)
+            // Example: Index 0 (45deg) -> Needs 315deg rotation to reach Top
+            const spins = 10 + Math.random() * 2; // Extra spins
+            const baseRotation = rotation + (360 * Math.floor(spins));
+            const targetRotation = baseRotation + (360 - winnerAngle);
 
             const duration = 8;
             const elapsed = (Date.now() - state.spinTimestamp) / 1000;
@@ -83,11 +85,14 @@ export function GachaWheel({ room }: { room: Room }) {
                 />
 
                 {/* Wheel */}
-                <div
+                <motion.div
                     className="w-full h-full rounded-full overflow-hidden border-4 border-white/30 shadow-2xl relative"
+                    animate={{ rotate: rotation }}
+                    transition={{
+                        duration: spinning ? 8 : 0,
+                        ease: [0.1, 0, 0, 1] // Heavy wheel feel
+                    }}
                     style={{
-                        transform: `rotate(${rotation}deg)`,
-                        transition: spinning ? 'transform 8s cubic-bezier(0.05, 0.3, 0.1, 1)' : 'none',
                         background: '#1a1a1a'
                     }}
                 >
@@ -143,7 +148,7 @@ export function GachaWheel({ room }: { room: Room }) {
                         <circle cx="100" cy="100" r="10" fill="#444" />
                         <circle cx="100" cy="100" r="4" fill="#666" />
                     </svg>
-                </div>
+                </motion.div>
             </div>
 
             {/* Status */}
@@ -160,6 +165,26 @@ export function GachaWheel({ room }: { room: Room }) {
                 <RotateCcw size={24} className={spinning ? 'animate-spin' : ''} />
                 {spinning ? 'Memutar...' : 'PUTAR'}
             </button>
+
+            {/* History (Restored & Accurate) */}
+            {state.history && state.history.length > 0 && (
+                <div className="w-full max-w-sm mt-6">
+                    <div className="text-xs text-white/40 mb-2 text-center">Riwayat Spin</div>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                        {state.history.slice(0, 5).map((h: any, i: number) => (
+                            <span
+                                key={i}
+                                className={`px-3 py-1 rounded-full text-xs ${i === 0
+                                        ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
+                                        : 'bg-white/5 text-white/50'
+                                    }`}
+                            >
+                                {h.label}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
