@@ -3,27 +3,14 @@ import { Room } from '@/db/schema';
 import { useEffect, useState, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { spinWheel } from '@/app/actions';
-import { RotateCcw, Volume2, VolumeX } from 'lucide-react';
-import { soundManager } from '@/lib/sounds';
+import { RotateCcw } from 'lucide-react';
 
 export function GachaWheel({ room }: { room: Room }) {
     const options = JSON.parse(room.options);
     const state = JSON.parse(room.state);
     const [spinning, setSpinning] = useState(false);
     const [rotation, setRotation] = useState(0);
-    const [soundEnabled, setSoundEnabled] = useState(true);
     const lastSpinRef = useRef<number | null>(null);
-    const tickIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Initialize sound on first interaction
-    useEffect(() => {
-        const initSound = () => {
-            soundManager.init();
-            document.removeEventListener('click', initSound);
-        };
-        document.addEventListener('click', initSound);
-        return () => document.removeEventListener('click', initSound);
-    }, []);
 
     useEffect(() => {
         if (state.isSpinning && state.winner && state.spinTimestamp) {
@@ -51,31 +38,11 @@ export function GachaWheel({ room }: { room: Room }) {
                 setSpinning(true);
                 setRotation(targetRotation);
 
-                // Play tick sounds during spin
-                if (soundEnabled) {
-                    let tickDelay = 50;
-                    let tickCount = 0;
-                    const maxTicks = 60;
-
-                    const playTicks = () => {
-                        if (tickCount < maxTicks) {
-                            soundManager.playTick();
-                            tickCount++;
-                            tickDelay = Math.min(tickDelay * 1.08, 500);
-                            tickIntervalRef.current = setTimeout(playTicks, tickDelay);
-                        }
-                    };
-                    playTicks();
-                }
-
                 setTimeout(() => {
                     setSpinning(false);
-                    if (tickIntervalRef.current) clearTimeout(tickIntervalRef.current);
-
-                    if (soundEnabled) soundManager.playDing();
                     confetti({
-                        particleCount: 150,
-                        spread: 80,
+                        particleCount: 100,
+                        spread: 70,
                         origin: { y: 0.5 },
                         colors: ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6']
                     });
@@ -85,11 +52,7 @@ export function GachaWheel({ room }: { room: Room }) {
                 setSpinning(false);
             }
         }
-
-        return () => {
-            if (tickIntervalRef.current) clearTimeout(tickIntervalRef.current);
-        };
-    }, [state.isSpinning, state.winner, state.spinTimestamp, options, rotation, soundEnabled]);
+    }, [state.isSpinning, state.winner, state.spinTimestamp, options, rotation]);
 
     const handleSpin = async () => {
         if (spinning) return;
@@ -103,15 +66,6 @@ export function GachaWheel({ room }: { room: Room }) {
 
     return (
         <div className="flex flex-col items-center gap-6 w-full px-4">
-            {/* Sound Toggle */}
-            <button
-                onClick={() => setSoundEnabled(!soundEnabled)}
-                className="absolute top-20 right-4 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-white/50 hover:text-white"
-                title={soundEnabled ? 'Mute' : 'Unmute'}
-            >
-                {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-            </button>
-
             {/* Wheel Container */}
             <div className="relative" style={{ width: 'min(320px, 85vw)', height: 'min(320px, 85vw)' }}>
                 {/* Pointer */}
@@ -206,26 +160,6 @@ export function GachaWheel({ room }: { room: Room }) {
                 <RotateCcw size={24} className={spinning ? 'animate-spin' : ''} />
                 {spinning ? 'Memutar...' : 'PUTAR'}
             </button>
-
-            {/* History */}
-            {state.history && state.history.length > 0 && (
-                <div className="w-full max-w-sm mt-6">
-                    <div className="text-xs text-white/40 mb-2 text-center">Riwayat Spin</div>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                        {state.history.slice(0, 5).map((h: any, i: number) => (
-                            <span
-                                key={i}
-                                className={`px-3 py-1 rounded-full text-xs ${i === 0
-                                        ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
-                                        : 'bg-white/5 text-white/50'
-                                    }`}
-                            >
-                                {h.label}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

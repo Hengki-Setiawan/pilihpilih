@@ -8,7 +8,6 @@ import { DiceRoll } from './DiceRoll';
 import { CardDraw } from './CardDraw';
 import { ProsConsPanel } from './ProsConsPanel';
 import { QRShareModal } from './QRShareModal';
-import { ThemeToggle } from './ThemeToggle';
 import { Copy, Check, Clock, ArrowLeft, Trash2, QrCode } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
