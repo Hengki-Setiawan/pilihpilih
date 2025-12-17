@@ -4,14 +4,15 @@ import { useEffect, useState, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { spinWheel } from '@/app/actions';
 import { RotateCcw } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useAnimation } from 'framer-motion';
 
 export function GachaWheel({ room }: { room: Room }) {
     const options = JSON.parse(room.options);
     const state = JSON.parse(room.state);
     const [spinning, setSpinning] = useState(false);
-    const [rotation, setRotation] = useState(0);
+    const controls = useAnimation();
     const lastSpinRef = useRef<number | null>(null);
+    const currentRotationRef = useRef(0);
 
     useEffect(() => {
         if (state.isSpinning && state.winner && state.spinTimestamp) {
@@ -21,44 +22,72 @@ export function GachaWheel({ room }: { room: Room }) {
             const winnerIndex = options.findIndex((o: any) => o.id === state.winner);
             if (winnerIndex === -1) return;
 
-            // Calculate winner angle (0-based from start of slice 0)
+            // Calculate target angle
             const sliceAngle = 360 / options.length;
             const randomOffset = (Math.random() - 0.5) * (sliceAngle * 0.5);
             const winnerAngle = winnerIndex * sliceAngle + sliceAngle / 2 + randomOffset;
 
-            // Calculate target rotation to bring winner to Top (270 degrees or -90)
-            // Since rendering starts at -90, we need to rotate by (360 - winnerAngle)
-            // Example: Index 0 (45deg) -> Needs 315deg rotation to reach Top
-            const spins = 10 + Math.random() * 2; // Extra spins
-            const baseRotation = rotation + (360 * Math.floor(spins));
-            const targetRotation = baseRotation + (360 - winnerAngle);
+            // Calculate spins
+            const spins = 8 + Math.random(); // 8-9 full spins
+            const currentRotation = currentRotationRef.current;
 
-            const duration = 8;
+            // Calculate target rotation
+            // We want to land on (270 - winnerAngle)
+            // But we must add full spins to current rotation
+            // Note: SVG starts at -90 (12 o'clock), so 0 degrees is 12 o'clock.
+            // Wait, standard SVG circle starts at 3 o'clock (0 deg).
+            // My code rotates slices by -90. So index 0 starts at -90 (12 o'clock).
+            // So index 0 center is at -90 + slice/2.
+            // If I rotate by R, index 0 moves to -90 + slice/2 + R.
+            // I want it to land on -90 (270).
+            // So -90 + slice/2 + R = 270 => R = 270 - (-90 + slice/2) = 360 - slice/2.
+            // Let's stick to the formula: Target = 270 - winnerAngle.
+
+            const targetAngle = 270 - winnerAngle;
+            const currentMod = currentRotation % 360;
+            const diff = ((targetAngle - currentMod) % 360 + 360) % 360;
+            const finalRotation = currentRotation + (360 * Math.floor(spins)) + diff;
+
+            const duration = 8; // Total spin duration in seconds
             const elapsed = (Date.now() - state.spinTimestamp) / 1000;
+            const remaining = Math.max(0, duration - elapsed);
 
-            if (elapsed < duration) {
+            if (remaining > 0) {
                 setSpinning(true);
-                setRotation(targetRotation);
 
-                setTimeout(() => {
+                controls.start({
+                    rotate: finalRotation,
+                    transition: {
+                        duration: remaining,
+                        ease: [0.15, 0, 0.15, 1], // Custom bezier for realistic wheel friction
+                    }
+                }).then(() => {
                     setSpinning(false);
+                    currentRotationRef.current = finalRotation;
                     confetti({
                         particleCount: 100,
                         spread: 70,
                         origin: { y: 0.5 },
                         colors: ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6']
                     });
-                }, (duration - elapsed) * 1000);
+                });
             } else {
-                setRotation(targetRotation);
+                // Already finished, just snap to result
+                controls.set({ rotate: finalRotation });
+                currentRotationRef.current = finalRotation;
                 setSpinning(false);
             }
         }
-    }, [state.isSpinning, state.winner, state.spinTimestamp, options, rotation]);
+    }, [state.isSpinning, state.winner, state.spinTimestamp, options, controls]);
 
     const handleSpin = async () => {
         if (spinning) return;
-        await spinWheel(room.id);
+        setSpinning(true); // Optimistic update
+        try {
+            await spinWheel(room.id);
+        } catch (e) {
+            setSpinning(false);
+        }
     };
 
     const colors = [
@@ -87,11 +116,8 @@ export function GachaWheel({ room }: { room: Room }) {
                 {/* Wheel */}
                 <motion.div
                     className="w-full h-full rounded-full overflow-hidden border-4 border-white/30 shadow-2xl relative"
-                    animate={{ rotate: rotation }}
-                    transition={{
-                        duration: spinning ? 8 : 0,
-                        ease: [0.1, 0, 0, 1] // Heavy wheel feel
-                    }}
+                    animate={controls}
+                    initial={{ rotate: 0 }}
                     style={{
                         background: '#1a1a1a'
                     }}
