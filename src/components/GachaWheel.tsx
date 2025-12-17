@@ -192,25 +192,6 @@ export function GachaWheel({ room }: { room: Room }) {
                 {spinning ? 'Memutar...' : 'PUTAR'}
             </button>
 
-            {/* History (Restored & Accurate) */}
-            {state.history && state.history.length > 0 && (
-                <div className="w-full max-w-sm mt-6">
-                    <div className="text-xs text-white/40 mb-2 text-center">Riwayat Spin</div>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                        {state.history.slice(0, 5).map((h: any, i: number) => (
-                            <span
-                                key={i}
-                                className={`px-3 py-1 rounded-full text-xs ${i === 0
-                                        ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
-                                        : 'bg-white/5 text-white/50'
-                                    }`}
-                            >
-                                {h.label}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
